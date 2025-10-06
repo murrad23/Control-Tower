@@ -1,4 +1,4 @@
-app = "your-api-app"         # <-- replace with your Fly app name
+app = "control-tower-api"         # <-- replace with your Fly app name
 primary_region = "lhr"
 
 [http_service]
