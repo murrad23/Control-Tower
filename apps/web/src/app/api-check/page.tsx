@@ -1,4 +1,4 @@
-// Server Component: fetch runs on the server at request time
+// apps/web/src/app/api-check/page.tsx
 async function getData() {
   const base = process.env.NEXT_PUBLIC_API_BASE || "";
   const res = await fetch(`${base}/api/hello?name=ControlTower`, { cache: "no-store" });
