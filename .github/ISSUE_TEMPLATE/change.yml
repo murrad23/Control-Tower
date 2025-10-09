@@ -1,0 +1,21 @@
+name: Change request
+description: Feature or improvement
+title: "[Change]: "
+labels: ["change"]
+body:
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope / user value
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+  - type: checkboxes
+    id: dod
+    attributes:
+      label: Definition of Done
+      options:
+        - label: Tests passing
+        - label: Docs updated
+        - label: Preview link attached
