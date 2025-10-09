@@ -2,7 +2,7 @@ name: project-journal
 on:
   schedule:
     - cron: "0 8 * * *"   # daily 08:00 UTC
-  workflow_dispatch:
+workflow_dispatch: {}
 
 jobs:
   snapshot:
