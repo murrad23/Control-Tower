@@ -1,0 +1,40 @@
+name: security
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  npm-audit:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: apps/web } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci
+      - run: |
+          # Non-blocking: warn on high/critical but don't fail PRs yet
+          npm audit --audit-level=high || echo "::warning::npm audit found issues"
+
+  pip-audit:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: apps/api } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install -r requirements.txt pip-audit
+      - run: |
+          pip-audit || echo "::warning::pip-audit found issues"
+
+  bandit:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: apps/api } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install bandit -r requirements.txt
+      - run: |
+          bandit -q -r . || echo "::warning::Bandit found issues"
