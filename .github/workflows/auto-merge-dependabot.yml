@@ -1,0 +1,23 @@
+name: auto-merge-dependabot
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  check_suite:
+    types: [completed]
+  workflow_run:
+    workflows: ["build-test"]
+    types: [completed]
+
+jobs:
+  automerge:
+    if: github.actor == 'dependabot[bot]'
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge when CI passes
+        uses: fastify/github-action-merge-dependabot@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          target: minor
