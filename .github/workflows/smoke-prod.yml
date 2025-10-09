@@ -1,0 +1,29 @@
+name: smoke-prod
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: "0 7 * * *"   # daily 07:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check homepage
+        run: |
+          url="${{ vars.WEB_PROD_URL }}"
+          echo "Hitting $url"
+          code=$(curl -s -o /dev/null -w "%{http_code}" "$url")
+          if [ "$code" != "200" ]; then
+            echo "Home returned $code"; exit 1
+          fi
+
+      - name: Check API connectivity page
+        run: |
+          url="${{ vars.WEB_PROD_URL }}/api-check"
+          echo "Hitting $url"
+          body=$(curl -s "$url")
+          echo "$body"
+          echo "$body" | grep -q '"message": "hello, ControlTower"' || {
+            echo "Expected greeting not found"; exit 1; }
