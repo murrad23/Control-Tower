@@ -1,0 +1,70 @@
+name: lighthouse-preview
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  lhci:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write   # to comment results
+      deployments: read      # to discover Vercel preview
+    steps:
+      - uses: actions/checkout@v4
+
+      # Find the Vercel preview URL for this PR by scanning GitHub Deployments
+      - name: Discover Vercel preview URL
+        id: discover
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pr = context.payload.pull_request || (await github.rest.pulls.get({ owner, repo, pull_number: context.issue.number })).data;
+            // List deployments for this ref (head SHA)
+            const deployments = await github.paginate(github.rest.repos.listDeployments, {
+              owner, repo, sha: pr.head.sha, per_page: 100
+            });
+            // Find latest preview deployment (Vercel sets environment to 'Preview' or 'preview')
+            let targetUrl = null;
+            for (const d of deployments) {
+              if (!/preview/i.test(d.environment || "")) continue;
+              // fetch latest status to get target_url
+              const { data: statuses } = await github.rest.repos.listDeploymentStatuses({ owner, repo, deployment_id: d.id, per_page: 1 });
+              if (statuses[0]?.state === "success" && statuses[0]?.target_url) {
+                targetUrl = statuses[0].target_url;
+                break;
+              }
+            }
+            if (!targetUrl) {
+              core.setFailed("Could not find Vercel preview URL. Ensure Vercel GitHub integration is enabled and a preview is ready.");
+            } else {
+              core.setOutput("url", targetUrl);
+            }
+
+      - name: Show preview URL
+        run: echo "Preview: ${{ steps.discover.outputs.url }}"
+
+      # Run Lighthouse against the preview URL
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v11
+        with:
+          urls: |
+            ${{ steps.discover.outputs.url }}
+            ${{ steps.discover.outputs.url }}/api-check
+          configPath: apps/web/.lighthouserc.json
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+
+      # Post a short summary back to the PR
+      - name: Comment results
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          recreate: true
+          message: |
+            ### Lighthouse (Preview)
+            URL: ${{ steps.discover.outputs.url }}
+
+            Artifacts: check this workflow's **Artifacts** for HTML reports.
+            _Thresholds are warnings only; we can tighten later._
