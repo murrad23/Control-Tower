@@ -1,0 +1,44 @@
+name: lighthouse-prod
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: "0 8 * * *"  # daily at 08:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  lhci-prod:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # to commit into docs/journal
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Lighthouse on production
+        id: lh
+        uses: treosh/lighthouse-ci-action@v11
+        with:
+          urls: |
+            ${{ vars.WEB_PROD_URL }}
+            ${{ vars.WEB_PROD_URL }}/api-check
+          configPath: apps/web/.lighthouserc.json
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+
+      - name: Append scores to daily journal
+        id: write
+        run: |
+          day=$(date -u +%F)
+          mkdir -p docs/journal
+          # Simple summary line (we keep it lightweight)
+          echo "## Lighthouse (prod) — $day" >> docs/journal/${day}.md
+          echo "- URL: ${{ vars.WEB_PROD_URL }}" >> docs/journal/${day}.md
+          echo "- Reports: see workflow Artifacts" >> docs/journal/${day}.md
+          echo "" >> docs/journal/${day}.md
+
+      - name: Commit journal update
+        uses: EndBug/add-and-commit@v9
+        with:
+          add: docs/journal/*
+          message: "chore(journal): append Lighthouse (prod) summary"
+          default_author: github_actions
